@@ -1,2 +1,5 @@
-idf_component_register(SRCS "env_controller_esp32.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(
+    SRCS "app_main.c"
+    INCLUDE_DIRS "."
+    REQUIRES led
+)
