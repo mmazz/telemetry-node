@@ -5,18 +5,20 @@
 #include "portmacro.h"
 #include "led.h"
 
+const TickType_t duration = 100 / portTICK_PERIOD_MS;
+
 void app_main(void)
 {
 
-    char *ourTaskName = pcTaskGetName(NULL);
+    static const char *ourTaskName = "main";
     ESP_LOGI(ourTaskName, "Hello world!");
 
     led_init();
 
     while(1)
     {
-        led_on();
-        led_off();
+        led_toggle();
+        vTaskDelay(duration);
     }
 
 }
