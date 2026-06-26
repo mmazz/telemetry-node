@@ -5,7 +5,6 @@
 #include "portmacro.h"
 #include "led.h"
 
-#define BLINK_LED 2
 void app_main(void)
 {
 

@@ -1,8 +1,7 @@
 #include "led.h"
 
 
-#define BLINK_LED 16
-const TickType_t duration = 500 / portTICK_PERIOD_MS;
+const TickType_t duration = 100 / portTICK_PERIOD_MS;
 
 
 void led_init(void){
