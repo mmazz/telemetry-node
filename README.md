@@ -1,6 +1,13 @@
 # ESP32
 
+## Proyecto educativo
 
+Agarre todas las cositas que tenia en casa e intento armar un unico proyecto que
+involucre mucho.
+
+- Sensores de sonido (HC-SR04):
+- Reloj Tiempo Real (RTC DS3231):
+-
 ## build
 
 Setup unica vez:
@@ -45,3 +52,6 @@ Monitor serial:
 ```
 idf.py monitor
 ```
+
+
+##
