@@ -5,6 +5,7 @@
 #include "radar.h"
 #include "button.h"
 #include "config.h"
+#include "reloj.h"
 
 static const char *TAG = "main";
 
@@ -17,7 +18,8 @@ void app_main(void)
 
     bool radar_running = true;
     uint8_t dummy;
-
+    ESP_ERROR_CHECK(i2cdev_init());
+    xTaskCreate(ds3231_test, "ds3231_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
     while (1)
     {
 

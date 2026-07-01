@@ -19,7 +19,7 @@ source export.sh
 ```
 
 
-Crear proyecto por primera vez:
+Crear proyecto por primera vez (no hace falta si se clona este repo):
 ```
 cd ~
 idf.py create-project env_controller_esp32
@@ -28,7 +28,7 @@ idf.py set-target esp32
 idf.py build
 ```
 
-Al clonar este repo hay que repetir los primeros 3 pasos.
+<!-- Al clonar este repo hay que repetir los primeros 3 pasos.-->
 
 Luego cada vez que queremos trabajar:
 
@@ -50,8 +50,12 @@ u otro puerto que se encuentre nuestro dispositivo.
 Monitor serial:
 
 ```
-idf.py monitor
+idf.py -p /dev/ttyUSB0 monitor
 ```
 
 
-##
+## Requisitos
+
+```
+idf.py add-dependency esp-idf-lib/ds3231
+```

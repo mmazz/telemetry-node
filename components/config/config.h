@@ -4,6 +4,9 @@
 #include "driver/gpio.h"
 
 #define BLINK_LED GPIO_NUM_15
+#define I2C_SDA GPIO_NUM_21
+#define I2C_SDL GPIO_NUM_22
+#define BLINK_LED GPIO_NUM_15
 #define ON_LED GPIO_NUM_16
 #define TRIG_PIN GPIO_NUM_18
 #define ECHO_PIN GPIO_NUM_19
