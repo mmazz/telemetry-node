@@ -1,5 +1,5 @@
-#ifndef RELOJ_H
-#define RELOJ_H
+#ifndef RTC_H
+#define RTC_H
 
 #include <ds3231.h>
 #include "esp_check.h"

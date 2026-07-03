@@ -5,9 +5,42 @@
 #include "radar.h"
 #include "button.h"
 #include "config.h"
-#include "reloj.h"
+#include "rtc.h"
+#include "i2c_bus.h"
+#include "lcd.h"
 
 static const char *TAG = "main";
+
+static void lcd_task(void *pvParameters)
+{
+    i2c_master_bus_handle_t bus = (i2c_master_bus_handle_t)pvParameters;
+
+    esp_err_t ret = lcd_init(bus);
+    if (ret != ESP_OK) {
+        printf("Error inicializando LCD: %s\n", esp_err_to_name(ret));
+        vTaskDelete(NULL);
+        return;
+    }
+
+    lcd_clear();
+
+    lcd_set_cursor(0, 0);
+    lcd_print("Hola mundo!");
+
+    int contador = 0;
+    char buf[24];
+
+    while (1) {
+        lcd_set_cursor(0, 1);
+
+        contador %= 10000;
+        snprintf(buf, sizeof(buf), "Contador: %4d", contador++);
+
+        lcd_print(buf);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
 
 void app_main(void)
 {
@@ -18,11 +51,27 @@ void app_main(void)
 
     bool radar_running = true;
     uint8_t dummy;
-    ESP_ERROR_CHECK(i2cdev_init());
-    xTaskCreate(ds3231_test, "ds3231_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
+    i2c_master_bus_handle_t bus = i2c_bus_init();
+    xTaskCreate(ds3231_test,
+            "ds3231_test",
+            configMINIMAL_STACK_SIZE * 3,
+            bus,
+            5,
+            NULL);
+ //   i2c_scan(bus);
+
+
+    xTaskCreate(
+        lcd_task,      // función
+        "lcd_task",    // nombre
+        4096,          // stack
+        bus,           // parámetro
+        5,             // prioridad
+        NULL           // handle
+    );
+
     while (1)
     {
-
         bool toggle_requested = false;
         while (xQueueReceive(button_queue, &dummy, 0) == pdTRUE)
         {

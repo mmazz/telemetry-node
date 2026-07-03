@@ -1,4 +1,4 @@
-#include "reloj.h"
+#include "rtc.h"
 #include "config.h"
 #include <stdio.h>
 #include <freertos/FreeRTOS.h>
@@ -10,7 +10,7 @@ void ds3231_test(void *pvParameters)
     i2c_dev_t dev;
     memset(&dev, 0, sizeof(i2c_dev_t));
 
-    ESP_ERROR_CHECK(ds3231_init_desc(&dev, 0, I2C_SDA, I2C_SDL));
+    ESP_ERROR_CHECK(ds3231_init_desc(&dev, 0, I2C_SDA, I2C_SCL));
 
     struct tm time = {
         .tm_year = 122, // (2022 - 1900)
