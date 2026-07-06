@@ -16,8 +16,8 @@
 #define I2C_PORT    0
 
 #define LCD_ADDR 0x27
+#define MPU6050_ADDR 0x69
 #define RELOJ_ADDR 0x68 // La biblioteca ya la conoce asi que ni la usamos explicitamente
-
 
 #define LCD_COLS 16
 #define LCD_ROWS 2

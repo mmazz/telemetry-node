@@ -1,61 +1,85 @@
-# ESP32
+# ESP32 Telemetry Node
 
-## Proyecto educativo
+## Descripción
 
-Agarre todas las cositas que tenia en casa e intento armar un unico proyecto que
-involucre mucho.
+Proyecto personal de exploración sobre sistemas embebidos utilizando ESP32 y FreeRTOS.
 
-- Sensores de sonido (HC-SR04):
-- Reloj Tiempo Real (RTC DS3231):
--
-## build
+El objetivo es desarrollar un nodo de adquisición de datos que integre distintos periféricos y transmita la información a una Raspberry Pi para su procesamiento y visualización.
 
-Setup unica vez:
-```
-git clone --recursive https://github.com/espressif/esp-idf
-cd esp-idf
-./install.sh
-source export.sh
-```
+Actualmente integra los siguientes módulos:
 
+- HC-SR04 (sensor ultrasónico de distancia)
+- DS3231 (RTC)
+- LCD 16x2 (LMB162HBC)
+- PCF8574 (adaptador I2C para LCD)
 
-Crear proyecto por primera vez (no hace falta si se clona este repo):
-```
-cd ~
-idf.py create-project env_controller_esp32
-cd env_controller_esp32
-idf.py set-target esp32
-idf.py build
-```
+La Raspberry Pi actúa como estación receptora, mostrando y registrando la telemetría enviada por el nodo.
 
-<!-- Al clonar este repo hay que repetir los primeros 3 pasos.-->
+## Objetivos técnicos
 
-Luego cada vez que queremos trabajar:
+- Programación en C utilizando ESP-IDF.
+- Organización del software mediante FreeRTOS.
+- Integración de múltiples periféricos.
+- Comunicación entre sistemas embebidos y Linux.
+- Experimentación con distintos mecanismos de comunicación (UART / WiFi).
 
-```
-cd env_controller_esp32
-source ~/esp-idf/export.sh
-idf.py build
-```
+## Estado actual
 
-
-Flashear firmware
-
-```
-idf.py -p /dev/ttyUSB0 flash
-```
-
-u otro puerto que se encuentre nuestro dispositivo.
-
-Monitor serial:
-
-```
-idf.py -p /dev/ttyUSB0 monitor
-```
+En desarrollo.
 
 
 ## Requisitos
 
+- ESP-IDF
+- Git
+- Python (según los requisitos de ESP-IDF)
+
+## Instalación de ESP-IDF
+
+Solo es necesario una vez.
+
+```bash
+git clone --recursive https://github.com/espressif/esp-idf
+cd esp-idf
+./install.sh
 ```
+
+## Clonar el proyecto
+
+```bash
+git clone https://github.com/mmazz/telemetry-node
+cd env_controller_esp32
+```
+
+## Configurar el entorno
+
+Debe ejecutarse al abrir una nueva terminal.
+
+```bash
+source ~/esp-idf/export.sh
+```
+
+## Dependencias
+
+```bash
 idf.py add-dependency esp-idf-lib/ds3231
 ```
+
+## Compilar
+
+```bash
+idf.py build
+```
+
+## Flashear
+
+```bash
+idf.py -p /dev/ttyUSB0 flash
+```
+
+## Monitor serie
+
+```bash
+idf.py -p /dev/ttyUSB0 monitor
+```
+

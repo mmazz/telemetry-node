@@ -5,7 +5,7 @@
 
 static i2c_master_bus_handle_t bus_handle = NULL;
 
-i2c_master_bus_handle_t i2c_bus_init(void)
+i2c_master_bus_handle_t i2c_bus_get(void)
 {
     if (bus_handle != NULL)
         return bus_handle;

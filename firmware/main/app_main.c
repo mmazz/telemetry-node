@@ -8,6 +8,7 @@
 #include "rtc.h"
 #include "i2c_bus.h"
 #include "lcd.h"
+#include "imu.h"
 
 static const char *TAG = "main";
 
@@ -134,7 +135,7 @@ void app_main(void)
     QueueHandle_t button_queue = button_init();
     uint8_t dummy;
 
-    i2c_master_bus_handle_t bus = i2c_bus_init();
+    i2c_master_bus_handle_t bus = i2c_bus_get();
 
     BaseType_t ok;
 
@@ -153,7 +154,16 @@ void app_main(void)
     }
 
     i2c_scan(bus);
-
+    ok = xTaskCreate( mpu6050_test,
+                      "mpu6050_test",
+                      configMINIMAL_STACK_SIZE * 3,
+                      bus,
+                      5,
+                      NULL);
+    if (ok != pdPASS)
+    {
+        ESP_LOGE(TAG, "No se pudo crear ds3231_test");
+    }
     ok = xTaskCreate(ds3231_test,
                       "ds3231_test",
                       configMINIMAL_STACK_SIZE * 3,
