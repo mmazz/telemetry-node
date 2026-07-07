@@ -1,9 +1,12 @@
 #include "i2c_bus.h"
 #include "esp_check.h"
 #include "config.h"
+#include <assert.h>
 
+static char* TAG = "MUTEX";
 
 static i2c_master_bus_handle_t bus_handle = NULL;
+static SemaphoreHandle_t i2c_bus_mutex = NULL;
 
 i2c_master_bus_handle_t i2c_bus_get(void)
 {
@@ -17,12 +20,15 @@ i2c_master_bus_handle_t i2c_bus_get(void)
         .sda_io_num = I2C_SDA,
         .scl_io_num = I2C_SCL,
         .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
+        .flags.enable_internal_pullup = true, // entender un poco mas esto
     };
 
     ESP_ERROR_CHECK(
         i2c_new_master_bus(&config, &bus_handle)
     );
+    i2c_bus_mutex = xSemaphoreCreateMutex();
+    assert(i2c_bus_mutex != NULL);
+
 
     return bus_handle;
 }

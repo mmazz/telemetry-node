@@ -9,6 +9,14 @@
 #include "i2c_bus.h"
 #include "lcd.h"
 #include "imu.h"
+/*
+ *  Quiero tener 4 tareas:
+ *      1. Sensores. Todos pueden muestrar cada 100ms maso
+ *      2. LCD: actualizar la lcd que para el ojo humano deberia ser mayor a 500ms
+ *      3. Enviar la info por UART (para luego ser por wifi)
+ *      4. Boton de interrupcion.
+ */
+
 
 static const char *TAG = "main";
 
@@ -20,10 +28,6 @@ typedef struct
 
 static QueueHandle_t lcd_queue;
 
-/* Única fuente de verdad para el estado del radar.
- * volatile no es estrictamente necesario aquí porque solo se lee/escribe
- * desde app_main (misma tarea), pero se deja por si en el futuro se lee
- * desde otro contexto (ISR, otra tarea) sin pasar por una cola. */
 static volatile bool radar_running = true;
 
 static void lcd_task(void *pvParameters)
@@ -54,21 +58,13 @@ static void lcd_task(void *pvParameters)
         /* Espera hasta que llegue un nuevo estado */
         if (xQueueReceive(lcd_queue, &msg, portMAX_DELAY) == pdTRUE)
         {
-            /* NO usamos lcd_clear() en cada actualización: el comando
-             * de borrado hace flashear toda la pantalla. En su lugar,
-             * reescribimos cada línea con ancho fijo (16 columnas,
-             * rellenado con espacios) para tapar cualquier resto del
-             * texto anterior sin necesidad de borrar. */
-            snprintf(temp, sizeof(temp),
-                     "Radar: %s",
+            snprintf(temp, sizeof(temp), "Telemetry: %s",
                      msg.radar_running ? "ON" : "OFF");
             snprintf(line1, sizeof(line1), "%-16s", temp);
 
             if (msg.distance_cm >= 0)
             {
-                snprintf(temp, sizeof(temp),
-                         "Dist:%6.1f cm",
-                         msg.distance_cm);
+                snprintf(temp, sizeof(temp), "Dist:%6.1f cm", msg.distance_cm);
             }
             else
             {
@@ -125,28 +121,56 @@ static void radar_task(void *pvParameters)
     }
 }
 
+
+
+typedef struct
+{
+    rtc_dev_t rtc;
+    radar_dev_t radar;
+    imu_dev_t imu;
+} telemetry_node_t;
+static telemetry_node_t node;
+
+void telemetry_node_init()
+{
+    i2c_master_bus_handle_t bus = i2c_bus_get();
+    ESP_LOGI(TAG, "Starting telemetry node");
+    gpio_set_direction(ON_LED, GPIO_MODE_OUTPUT);
+
+    rtc_ds_init(bus, &node.rtc);
+    radar_init(&node.radar);
+    imu_init(bus, &node.imu);
+}
+
+void sensor_task(void *pvParameters)
+{
+    telemetry_node_t *node = (telemetry_node_t *)pvParameters;
+
+    float distance_cm;
+    struct tm time_rtc;
+
+    while (1)
+    {
+        esp_err_t dist_ok = radar_get_distance(&node->radar, &distance_cm);
+
+        esp_err_t rtc_ok = rtc_get_time(&node->rtc, &time_rtc);
+        imu_data_t imu_data;
+
+        esp_err_t imu__ok = imu_read(&node->imu, &imu_data);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
+
+
 void app_main(void)
 {
-    ESP_LOGI(TAG, "Hello world!");
 
-    gpio_set_direction(ON_LED, GPIO_MODE_OUTPUT);
-    radar_init();
-
-    QueueHandle_t button_queue = button_init();
-    uint8_t dummy;
-
+    telemetry_node_init();
     i2c_master_bus_handle_t bus = i2c_bus_get();
 
-    BaseType_t ok;
 
-    /* IMPORTANTE: crear la cola ANTES de cualquier tarea que pueda
-     * escribirle. radar_task corre con prioridad 5 (mayor que
-     * main_task) y puede empezar a ejecutar apenas se llama a
-     * xTaskCreate, antes de que app_main siga su propia ejecución.
-     * Si lcd_queue todavía es NULL en ese momento, xQueueOverwrite
-     * dispara un assert fatal (xQueueGenericSend queue.c pxQueue). */
     lcd_queue = xQueueCreate(1, sizeof(lcd_msg_t));
-
     if (lcd_queue == NULL)
     {
         ESP_LOGE(TAG, "No se pudo crear lcd_queue");
@@ -154,57 +178,35 @@ void app_main(void)
     }
 
     i2c_scan(bus);
-    ok = xTaskCreate( mpu6050_test,
-                      "mpu6050_test",
-                      configMINIMAL_STACK_SIZE * 3,
-                      bus,
-                      5,
-                      NULL);
-    if (ok != pdPASS)
-    {
-        ESP_LOGE(TAG, "No se pudo crear ds3231_test");
-    }
-    ok = xTaskCreate(ds3231_test,
-                      "ds3231_test",
-                      configMINIMAL_STACK_SIZE * 3,
-                      bus,
-                      5,
-                      NULL);
-    if (ok != pdPASS)
-    {
-        ESP_LOGE(TAG, "No se pudo crear ds3231_test");
-    }
 
-    ok = xTaskCreate(radar_task,
-                      "radar_task",
-                      4096,
-                      NULL,
-                      5,
-                      NULL);
+    BaseType_t ok;
+    ok = xTaskCreate(mpu6050_test, "mpu6050_test", configMINIMAL_STACK_SIZE * 3,
+                      bus, 5, NULL);
     if (ok != pdPASS)
-    {
+        ESP_LOGE(TAG, "No se pudo crear mpu6050_test");
+
+    ok = xTaskCreate(ds3231_test, "ds3231_test", configMINIMAL_STACK_SIZE * 3,
+                    bus, 5, NULL);
+    if (ok != pdPASS)
+        ESP_LOGE(TAG, "No se pudo crear ds3231_test");
+
+    ok = xTaskCreate(radar_task, "radar_task", 4096, NULL, 5, NULL);
+    if (ok != pdPASS)
         ESP_LOGE(TAG, "No se pudo crear radar_task");
-    }
 
-    ok = xTaskCreate(lcd_task,      // función
-                      "lcd_task",   // nombre
-                      4096,         // stack
-                      bus,          // parámetro
-                      5,            // prioridad
-                      NULL);        // handle
+    ok = xTaskCreate(lcd_task, "lcd_task", 4096, bus, 5, NULL);
     if (ok != pdPASS)
-    {
         ESP_LOGE(TAG, "No se pudo crear lcd_task");
-    }
 
     lcd_msg_t lcd_msg =
     {
         .radar_running = true,
         .distance_cm = -1
     };
-
     xQueueOverwrite(lcd_queue, &lcd_msg);
 
+    QueueHandle_t button_queue = button_init();
+    uint8_t dummy;
     while (1)
     {
         bool toggle_requested = false;
@@ -225,10 +227,8 @@ void app_main(void)
         if (toggle_requested)
         {
             radar_running = !radar_running;
-
             gpio_set_level(ON_LED, radar_running);
             radar_set_paused(!radar_running);
-
             ESP_LOGI(TAG, "%s",
                      radar_running ? "Radar reanudado"
                                    : "Radar pausado");

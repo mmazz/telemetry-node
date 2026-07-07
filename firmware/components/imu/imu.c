@@ -66,7 +66,9 @@ static esp_err_t imu_read_all(imu_dev_t *dev, uint8_t *buf14)
                                         pdMS_TO_TICKS(100));
 }
 
-esp_err_t imu_get_accel(imu_dev_t *dev, float *ax, float *ay, float *az)
+
+
+esp_err_t imu_get_accel(imu_dev_t *dev, imu_vec3_t *accel)
 {
     uint8_t buf[14];
 
@@ -76,14 +78,14 @@ esp_err_t imu_get_accel(imu_dev_t *dev, float *ax, float *ay, float *az)
         return err;
     }
 
-    *ax = raw16(&buf[0]) / ACCEL_SENS_2G;
-    *ay = raw16(&buf[2]) / ACCEL_SENS_2G;
-    *az = raw16(&buf[4]) / ACCEL_SENS_2G;
+    accel->x = raw16(&buf[0]) / ACCEL_SENS_2G;
+    accel->y = raw16(&buf[2]) / ACCEL_SENS_2G;
+    accel->z = raw16(&buf[4]) / ACCEL_SENS_2G;
 
     return ESP_OK;
 }
 
-esp_err_t imu_get_gyro(imu_dev_t *dev, float *gx, float *gy, float *gz)
+esp_err_t imu_get_gyro(imu_dev_t *dev, imu_vec3_t *gyro)
 {
     uint8_t buf[14];
 
@@ -93,12 +95,33 @@ esp_err_t imu_get_gyro(imu_dev_t *dev, float *gx, float *gy, float *gz)
         return err;
     }
 
-    *gx = raw16(&buf[8])  / GYRO_SENS_250;
-    *gy = raw16(&buf[10]) / GYRO_SENS_250;
-    *gz = raw16(&buf[12]) / GYRO_SENS_250;
+    gyro->x = raw16(&buf[8])  / GYRO_SENS_250;
+    gyro->y = raw16(&buf[10]) / GYRO_SENS_250;
+    gyro->z = raw16(&buf[12]) / GYRO_SENS_250;
 
     return ESP_OK;
 }
+esp_err_t imu_read(imu_dev_t *dev, imu_data_t *data)
+{
+    uint8_t buf[14];
+
+
+    esp_err_t err = imu_read_all(dev, buf);
+    if (err != ESP_OK)
+    {
+        return err;
+    }
+    data->accel.x = raw16(&buf[0]) / ACCEL_SENS_2G;
+    data->accel.y = raw16(&buf[2]) / ACCEL_SENS_2G;
+    data->accel.z = raw16(&buf[4]) / ACCEL_SENS_2G;
+
+    data->gyro.x = raw16(&buf[8])  / GYRO_SENS_250;
+    data->gyro.y = raw16(&buf[10]) / GYRO_SENS_250;
+    data->gyro.z = raw16(&buf[12]) / GYRO_SENS_250;
+
+    return ESP_OK;
+}
+
 
 esp_err_t imu_get_temp(imu_dev_t *dev, float *temp_c)
 {
@@ -125,19 +148,13 @@ void mpu6050_test(void *pvParameters)
 
     while (1)
     {
-        float ax, ay, az, gx, gy, gz, temp_c;
-
+        float temp_c;
+        imu_data_t data;
         vTaskDelay(pdMS_TO_TICKS(250));
 
-        if (imu_get_accel(&dev, &ax, &ay, &az) != ESP_OK)
+        if (imu_read(&dev, &data) != ESP_OK)
         {
-            ESP_LOGW(TAG, "No se pudo leer el acelerometro");
-            continue;
-        }
-
-        if (imu_get_gyro(&dev, &gx, &gy, &gz) != ESP_OK)
-        {
-            ESP_LOGW(TAG, "No se pudo leer el giroscopio");
+            ESP_LOGW(TAG, "No se pudo leer el IMU");
             continue;
         }
 
@@ -148,7 +165,7 @@ void mpu6050_test(void *pvParameters)
         }
 
         ESP_LOGI(TAG, "accel[g] x=%.2f y=%.2f z=%.2f | gyro[dps] x=%.2f y=%.2f z=%.2f | %.2f degC",
-                 ax, ay, az, gx, gy, gz, temp_c);
+                 data.accel.x, data.accel.y, data.accel.z, data.gyro.x, data.gyro.y, data.gyro.z, temp_c);
     }
 }
 

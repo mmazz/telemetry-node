@@ -2,100 +2,102 @@
 #include "config.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "freertos/queue.h"
 #include "driver/gpio.h"
 #include "esp_timer.h"
 #include "esp_rom_sys.h"
 
 
-static QueueHandle_t echo_queue;
 static volatile int64_t echo_start_time = 0;
 static float last_distance_cm = -1.0f;
 static volatile bool is_paused = false;
-// --- ISR: se ejecuta en contexto de interrupcion, debe ser RAPIDA ---
+
+
+
 static void IRAM_ATTR echo_isr_handler(void *arg)
 {
+    radar_dev_t *dev = (radar_dev_t *)arg;
+
     int64_t now = esp_timer_get_time();
 
-    if (gpio_get_level(ECHO_PIN) == 1)
+    if (gpio_get_level(dev->echo_pin))
     {
-        // Flanco ascendente: arranca el pulso
-        echo_start_time = now;
+        dev->echo_start_time = now;
     }
     else
     {
-        // Flanco descendente: termino el pulso
-        int64_t duration = now - echo_start_time;
+        int64_t duration = now - dev->echo_start_time;
 
-        BaseType_t higher_priority_woken = pdFALSE;
-        xQueueSendFromISR(echo_queue, &duration, &higher_priority_woken);
+        BaseType_t hp = pdFALSE;
+        xQueueSendFromISR(dev->echo_queue, &duration, &hp);
 
-        if (higher_priority_woken)
-        {
+        if (hp)
             portYIELD_FROM_ISR();
-        }
     }
 }
 
-static void trigger_sensor(void)
+static void trigger_sensor(radar_dev_t *dev)
 {
-    gpio_set_level(TRIG_PIN, 0);
+    gpio_set_level(dev->trig_pin, 0);
     esp_rom_delay_us(2);
-    gpio_set_level(TRIG_PIN, 1);
+
+    gpio_set_level(dev->trig_pin, 1);
     esp_rom_delay_us(10);
-    gpio_set_level(TRIG_PIN, 0);
+
+    gpio_set_level(dev->trig_pin, 0);
+
 }
 
-static void radar_task(void *pvParameters)
+esp_err_t radar_get_distance(radar_dev_t *dev,
+                             float *distance_cm)
 {
     int64_t pulse_duration;
 
-    while (1)
+    trigger_sensor(dev);
+
+    if (xQueueReceive(dev->echo_queue,
+                      &pulse_duration,
+                      pdMS_TO_TICKS(60)) != pdTRUE)
     {
-        if (is_paused)
-        {
-            vTaskDelay(pdMS_TO_TICKS(100));
-            continue; // se salta la medicion completa este ciclo
-        }
-
-        trigger_sensor();
-
-        if (xQueueReceive(echo_queue, &pulse_duration, pdMS_TO_TICKS(60)) == pdTRUE)
-        {
-            last_distance_cm = pulse_duration / 58.0f;
-        }
-        else
-        {
-            last_distance_cm = -1.0f;
-        }
-
-        vTaskDelay(pdMS_TO_TICKS(100));
+        return ESP_ERR_TIMEOUT;
     }
+
+    *distance_cm = pulse_duration / 58.0f;
+
+    return ESP_OK;
 }
+
+esp_err_t radar_init(radar_dev_t *dev)
+{
+    dev->trig_pin = TRIG_PIN;
+    dev->echo_pin = ECHO_PIN;
+
+    gpio_set_direction(dev->trig_pin, GPIO_MODE_OUTPUT);
+
+    gpio_set_direction(dev->echo_pin, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(dev->echo_pin, GPIO_PULLDOWN_ONLY);
+
+    gpio_set_intr_type(dev->echo_pin, GPIO_INTR_ANYEDGE);
+
+    gpio_install_isr_service(0);
+
+    gpio_isr_handler_add(dev->echo_pin,
+                         echo_isr_handler,
+                         dev);
+
+    dev->echo_queue = xQueueCreate(1, sizeof(int64_t));
+
+    return dev->echo_queue ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
 
 void radar_set_paused(bool paused)
 {
     is_paused = paused;
 }
 
-void radar_init(void)
-{
-    gpio_set_direction(TRIG_PIN, GPIO_MODE_OUTPUT);
-
-    gpio_set_direction(ECHO_PIN, GPIO_MODE_INPUT);
-    gpio_set_pull_mode(ECHO_PIN, GPIO_PULLDOWN_ONLY);
-
-    gpio_set_intr_type(ECHO_PIN, GPIO_INTR_ANYEDGE);
-
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(ECHO_PIN, echo_isr_handler, NULL);
-
-    echo_queue = xQueueCreate(1, sizeof(int64_t));
-
-    xTaskCreate(radar_task, "radar_task", 2048, NULL, 5, NULL);
-}
-
 float radar_get_last_distance_cm(void)
 {
     return last_distance_cm;
 }
+
+

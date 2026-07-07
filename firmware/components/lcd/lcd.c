@@ -71,6 +71,7 @@ static esp_err_t lcd_send_nibble(uint8_t nibble, bool rs)
 
     return lcd_pulse_enable(data);
 }
+
 static esp_err_t lcd_send_byte(uint8_t value, bool rs)
 {
     esp_err_t ret;

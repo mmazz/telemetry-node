@@ -2,15 +2,11 @@
 #define I2C_BUS_H
 
 #include "driver/i2c_master.h"
+#include "freertos/FreeRTOS.h"
+
 
 i2c_master_bus_handle_t i2c_bus_get(void);
 
-
-// Como usarlo?
-//
-// i2c_master_bus_handle_t bus2 = i2c_bus_init();
-// i2c_scan(bus2);
-// lcd_init(bus2);
 void i2c_scan(i2c_master_bus_handle_t bus);
 
 #endif
