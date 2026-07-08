@@ -5,6 +5,11 @@
 #include "freertos/FreeRTOS.h"
 
 
+typedef struct
+{
+    i2c_master_bus_handle_t handle;
+} i2c_bus_t;
+
 i2c_master_bus_handle_t i2c_bus_get(void);
 
 void i2c_scan(i2c_master_bus_handle_t bus);

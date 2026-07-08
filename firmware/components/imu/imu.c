@@ -60,9 +60,7 @@ static esp_err_t imu_read_all(imu_dev_t *dev, uint8_t *buf14)
 {
     uint8_t reg = MPU6050_REG_ACCEL_XOUT_H;
 
-    return i2c_master_transmit_receive(dev->handle,
-                                        &reg, 1,
-                                        buf14, 14,
+    return i2c_master_transmit_receive(dev->handle, &reg, 1, buf14, 14,
                                         pdMS_TO_TICKS(100));
 }
 

@@ -3,10 +3,9 @@
 #include "config.h"
 #include <assert.h>
 
-static char* TAG = "MUTEX";
+static char* TAG = "i2c";
 
 static i2c_master_bus_handle_t bus_handle = NULL;
-static SemaphoreHandle_t i2c_bus_mutex = NULL;
 
 i2c_master_bus_handle_t i2c_bus_get(void)
 {
@@ -26,9 +25,6 @@ i2c_master_bus_handle_t i2c_bus_get(void)
     ESP_ERROR_CHECK(
         i2c_new_master_bus(&config, &bus_handle)
     );
-    i2c_bus_mutex = xSemaphoreCreateMutex();
-    assert(i2c_bus_mutex != NULL);
-
 
     return bus_handle;
 }

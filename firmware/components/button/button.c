@@ -1,10 +1,11 @@
 #include "button.h"
 #include "config.h"
-
 #include "driver/gpio.h"
+#include "esp_err.h"
 #include "esp_timer.h"
+#include "esp_log.h"
 
-
+static const char *TAG = "Button";
 static QueueHandle_t button_queue;
 static volatile int64_t last_press_time = 0;
 static volatile uint32_t isr_count = 0;
@@ -42,11 +43,10 @@ QueueHandle_t button_init(void)
     gpio_set_pull_mode(BUTTON_PIN, GPIO_PULLUP_ONLY);
     gpio_set_intr_type(BUTTON_PIN, GPIO_INTR_NEGEDGE);
 
-    // OJO: gpio_install_isr_service solo se llama UNA VEZ en todo el
-    // proyecto. Si radar_init() ya lo llamo, NO lo llames de nuevo aca,
-    // o vas a tener un error en runtime.
-    gpio_isr_handler_add(BUTTON_PIN, button_isr_handler, NULL);
-
-
+    esp_err_t err = gpio_isr_handler_add(BUTTON_PIN, button_isr_handler, NULL);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "gpio_isr_handler_add falló: %s", esp_err_to_name(err));
+    }
     return button_queue;
 }

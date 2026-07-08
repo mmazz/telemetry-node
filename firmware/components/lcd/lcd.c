@@ -113,13 +113,15 @@ esp_err_t lcd_init(i2c_master_bus_handle_t bus)
     vTaskDelay(pdMS_TO_TICKS(50));
 
     // Forzar modo 8 bits -> 4 bits (secuencia clásica del datasheet)
-    lcd_send_nibble(0x03, false);
+    //
+    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 1");
     vTaskDelay(pdMS_TO_TICKS(5));
-    lcd_send_nibble(0x03, false);
+    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 2");
     esp_rom_delay_us(150);
-    lcd_send_nibble(0x03, false);
+    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 3");
     esp_rom_delay_us(150);
-    lcd_send_nibble(0x02, false); // ahora sí, modo 4 bits
+    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x02, false), TAG, "Error nibble 4 (modo 4 bits)");
+
 
     // A partir de acá ya se puede usar lcd_send_command (envía 2 nibbles)
     lcd_send_command(0x28); // Function set: 4 bits, 2 líneas, fuente 5x8
