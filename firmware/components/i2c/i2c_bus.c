@@ -6,12 +6,21 @@
 static char* TAG = "i2c";
 
 static i2c_master_bus_handle_t bus_handle = NULL;
-
+SemaphoreHandle_t i2c_mutex = NULL;
 i2c_master_bus_handle_t i2c_bus_get(void)
 {
     if (bus_handle != NULL)
         return bus_handle;
-
+    if (i2c_mutex == NULL)
+    {
+        i2c_mutex = xSemaphoreCreateMutex();
+        if (i2c_mutex == NULL)
+        {
+            ESP_LOGE(TAG, "No se pudo crear i2c_mutex");
+            // decisión de diseño: abortar, no seguir con un mutex nulo
+            abort();
+        }
+    }
     i2c_master_bus_config_t config =
     {
         .clk_source = I2C_CLK_SRC_DEFAULT,

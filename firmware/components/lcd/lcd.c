@@ -1,4 +1,5 @@
 #include "lcd.h"
+#include "i2c_bus.h"
 #include "config.h"
 #include "esp_check.h"
 #include "freertos/FreeRTOS.h"
@@ -96,42 +97,40 @@ static esp_err_t lcd_send_command(uint8_t cmd)
     }
     return ret;
 }
-
 esp_err_t lcd_init(i2c_master_bus_handle_t bus)
 {
-    i2c_device_config_t config =
-    {
-        .device_address = LCD_ADDR,
-        .scl_speed_hz = 100000,
-    };
-    ESP_RETURN_ON_ERROR(
-        i2c_master_bus_add_device(bus, &config, &lcd_dev),
-        TAG, "Error agregando LCD"
-    );
-    vTaskDelay(pdMS_TO_TICKS(3000)); // 3 segundos para que puedas mirar el LCD
-    // Esperar a que el LCD termine su power-on reset (datasheet pide >40ms)
+    i2c_device_config_t config = { .device_address = LCD_ADDR, .scl_speed_hz = 100000 };
+
+    xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+
+    esp_err_t err = i2c_master_bus_add_device(bus, &config, &lcd_dev);
+    if (err != ESP_OK) { xSemaphoreGive(i2c_mutex); return err; }
+
+    vTaskDelay(pdMS_TO_TICKS(3000));
     vTaskDelay(pdMS_TO_TICKS(50));
 
-    // Forzar modo 8 bits -> 4 bits (secuencia clásica del datasheet)
-    //
-    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 1");
+    err = lcd_send_nibble(0x03, false); if (err) goto fail;
     vTaskDelay(pdMS_TO_TICKS(5));
-    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 2");
+    err = lcd_send_nibble(0x03, false); if (err) goto fail;
     esp_rom_delay_us(150);
-    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x03, false), TAG, "Error nibble 3");
+    err = lcd_send_nibble(0x03, false); if (err) goto fail;
     esp_rom_delay_us(150);
-    ESP_RETURN_ON_ERROR(lcd_send_nibble(0x02, false), TAG, "Error nibble 4 (modo 4 bits)");
+    err = lcd_send_nibble(0x02, false); if (err) goto fail;
 
+    lcd_send_command(0x28);
+    lcd_send_command(0x08);
+    lcd_send_command(0x01);
+    vTaskDelay(pdMS_TO_TICKS(2));
+    lcd_send_command(0x06);
+    lcd_send_command(0x0C);
 
-    // A partir de acá ya se puede usar lcd_send_command (envía 2 nibbles)
-    lcd_send_command(0x28); // Function set: 4 bits, 2 líneas, fuente 5x8
-    lcd_send_command(0x08); // Display off
-    lcd_send_command(0x01); // Clear display
-    vTaskDelay(pdMS_TO_TICKS(2)); // Clear tarda ~1.6ms, no 50us
-    lcd_send_command(0x06); // Entry mode: incrementa, sin shift
-    lcd_send_command(0x0C); // Display on, cursor off, blink off
-
+    xSemaphoreGive(i2c_mutex);
     return ESP_OK;
+
+fail:
+    xSemaphoreGive(i2c_mutex);
+    ESP_LOGE(TAG, "Error en secuencia de init: %s", esp_err_to_name(err));
+    return err;
 }
 
 static esp_err_t lcd_send_data(uint8_t data)
