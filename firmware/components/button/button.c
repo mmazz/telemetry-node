@@ -10,6 +10,8 @@ static QueueHandle_t button_queue;
 static volatile int64_t last_press_time = 0;
 static volatile uint32_t isr_count = 0;
 
+
+// TODO para enteder mas, hacer que esta ISR use primero semaphore, y luego direct to task notification
 static void IRAM_ATTR button_isr_handler(void *arg)
 {
     int64_t now = esp_timer_get_time();
@@ -21,6 +23,9 @@ static void IRAM_ATTR button_isr_handler(void *arg)
     isr_count++;
     uint8_t dummy = 1;
     BaseType_t higher_priority_woken = pdFALSE;
+
+    // Hay algo que se llama direct to task notification, que vendria a ser mas eficiente para este caso
+    // Tambien se podria usar un semaphore, pero sigue siendo mas eficiente lo que acabo de decir
     xQueueSendFromISR(button_queue, &dummy, &higher_priority_woken);
     if (higher_priority_woken)
     {

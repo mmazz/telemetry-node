@@ -64,7 +64,6 @@ void telemetry_node_init(void)
     //registrar manejadores de interrupción para pines individuales. Ejemplo el boton.
     gpio_install_isr_service(0);
     gpio_set_direction(ON_LED, GPIO_MODE_OUTPUT);
-    i2c_mutex = xSemaphoreCreateMutex();
     ESP_LOGI(TAG, "Starting data queue");
     uart_queue = xQueueCreate(5, sizeof(telemetry_data_t));
     lcd_queue = xQueueCreate(1, sizeof(telemetry_data_t));
@@ -164,10 +163,17 @@ static void uart_task(void *pvParameters)
             if (atomic_load(&sensors_running))
             {
                 // serializar y transmitir msg
+                printf("New data:!\n");
+                printf("Distance:%f, Time (sec, min, hour):%d, %d, %d, Imu(x,y,z): %f, %f, %f !\n", msg.distance_cm, msg.time.tm_sec, msg.time.tm_min, msg.time.tm_hour, msg.imu.accel.x, msg.imu.accel.y, msg.imu.accel.z);
             }
             // si está pausado, simplemente no se envía (ya no llegan datos nuevos igual,
             // porque sensor_task no publica mientras sensors_running == false)
+            else{
+                printf("No data\n");
+            }
         }
+        // 1000 es solo para poder visualizar y debugear
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -191,23 +197,27 @@ void app_main(void)
 {
 
     telemetry_node_init();
-    i2c_master_bus_handle_t bus = i2c_bus_get();
-    i2c_scan(bus);
+ //   i2c_master_bus_handle_t bus = i2c_bus_get();
+  //  i2c_scan(bus);
 
     BaseType_t ok;
 
-    ok = xTaskCreate(lcd_task, "lcd_task", 4096,  telemetry_get_bus(), 4, NULL);
+    ok = xTaskCreate(lcd_task, "lcd_task", 4096,  telemetry_get_bus(), 8, NULL);
     if (ok != pdPASS)
         ESP_LOGE(TAG, "No se pudo crear el task del lcd");
 
-    ok = xTaskCreate(sensor_task, "sensor_task", 4096, &node, 5, NULL);
+    ok = xTaskCreate(sensor_task, "sensor_task", 4096, &node, 6, NULL);
     if (ok != pdPASS)
-        ESP_LOGE(TAG, "No se pudo crear el task de senor");
-
+        ESP_LOGE(TAG, "No se pudo crear el task del sensor");
+//
     QueueHandle_t btn_queue = button_init();
-    ok = xTaskCreate(button_task, "button_task", 2048, btn_queue, 6, NULL);
+    ok = xTaskCreate(button_task, "button_task", 2048, btn_queue, 7, NULL);
     if (ok != pdPASS)
-        ESP_LOGE(TAG, "No se pudo crear el task de senor");
+        ESP_LOGE(TAG, "No se pudo crear el task del boton");
+    ok = xTaskCreate(uart_task, "uart_task", 4096, NULL, 5, NULL);
+    if (ok != pdPASS)
+        ESP_LOGE(TAG, "No se pudo crear el task del uart");
+
 
 }
 

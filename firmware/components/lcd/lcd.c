@@ -140,7 +140,9 @@ static esp_err_t lcd_send_data(uint8_t data)
 
 esp_err_t lcd_clear(void)
 {
+    xSemaphoreTake(i2c_mutex, portMAX_DELAY);
     esp_err_t ret = lcd_send_command(0x01);
+    xSemaphoreGive(i2c_mutex);
     vTaskDelay(pdMS_TO_TICKS(2));
     return ret;
 }
