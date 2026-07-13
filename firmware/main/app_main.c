@@ -164,7 +164,10 @@ static void uart_task(void *pvParameters)
             {
                 // serializar y transmitir msg
                 printf("New data:!\n");
-                printf("Distance:%f, Time (sec, min, hour):%d, %d, %d, Imu(x,y,z): %f, %f, %f !\n", msg.distance_cm, msg.time.tm_sec, msg.time.tm_min, msg.time.tm_hour, msg.imu.accel.x, msg.imu.accel.y, msg.imu.accel.z);
+                printf("Distance:%f, Time (sec, min, hour):%d, %d, %d,"
+                        "Imu(x,y,z): %f, %f, %f !\n", msg.distance_cm, msg.time.tm_sec,
+                        msg.time.tm_min, msg.time.tm_hour, msg.imu.accel.x,
+                        msg.imu.accel.y, msg.imu.accel.z);
             }
             // si está pausado, simplemente no se envía (ya no llegan datos nuevos igual,
             // porque sensor_task no publica mientras sensors_running == false)
