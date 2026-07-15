@@ -6,8 +6,8 @@
 #define I2C_SDA GPIO_NUM_21
 #define I2C_SCL GPIO_NUM_22
 
-#define TX_PIN GPIO_NUM_1
-#define RX_PIN GPIO_NUM_3
+#define UART_TX_PIN GPIO_NUM_1
+#define UART_RX_PIN GPIO_NUM_3
 
 #define BLINK_LED GPIO_NUM_15
 #define ON_LED GPIO_NUM_16

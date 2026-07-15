@@ -3,6 +3,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "esp_timer.h"
+#include "telemetry.h"
 #include "radar.h"
 #include "button.h"
 #include "config.h"
@@ -10,6 +11,7 @@
 #include "i2c_bus.h"
 #include "lcd.h"
 #include "imu.h"
+#include "uart_link.h"
 #include <stdatomic.h>
 
 /*
@@ -34,16 +36,6 @@ typedef struct
 } telemetry_node_t;
 
 
-typedef struct
-{
-    float distance_cm;
-    bool  distance_valid;
-    struct tm time;
-    bool  time_valid;
-    imu_data_t imu;
-    bool  imu_valid;
-    int64_t timestamp_us;   // esp_timer_get_time(), para detectar datos viejos
-} telemetry_data_t;
 
 static QueueHandle_t lcd_queue;   // longitud 1, overwrite -> "último valor"
 static QueueHandle_t uart_queue;  // longitud N, FIFO -> no perder tramas
@@ -70,6 +62,7 @@ void telemetry_node_init(void)
     rtc_ds_init(s_i2c_bus, &node.rtc);
     imu_init(s_i2c_bus, &node.imu);
     radar_init(&node.radar);
+    uart_init();
     ESP_LOGI(TAG, "Finish Init");
 }
 
@@ -163,11 +156,12 @@ static void uart_task(void *pvParameters)
             if (atomic_load(&sensors_running))
             {
                 // serializar y transmitir msg
-                printf("New data:!\n");
-                printf("Distance:%f, Time (sec, min, hour):%d, %d, %d,"
-                        "Imu(x,y,z): %f, %f, %f !\n", msg.distance_cm, msg.time.tm_sec,
-                        msg.time.tm_min, msg.time.tm_hour, msg.imu.accel.x,
-                        msg.imu.accel.y, msg.imu.accel.z);
+            //    printf("New data:!\n");
+            //    printf("Distance:%f, Time (sec, min, hour):%d, %d, %d,"
+            //            "Imu(x,y,z): %f, %f, %f !\n", msg.distance_cm, msg.time.tm_sec,
+            //            msg.time.tm_min, msg.time.tm_hour, msg.imu.accel.x,
+            //            msg.imu.accel.y, msg.imu.accel.z);
+                 uart_send_telemetry(&msg);
             }
             // si está pausado, simplemente no se envía (ya no llegan datos nuevos igual,
             // porque sensor_task no publica mientras sensors_running == false)
