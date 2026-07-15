@@ -169,8 +169,7 @@ static void uart_task(void *pvParameters)
                 printf("No data\n");
             }
         }
-        // 1000 es solo para poder visualizar y debugear
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
