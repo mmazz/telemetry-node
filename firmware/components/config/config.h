@@ -10,7 +10,7 @@
 #define UART_RX_PIN GPIO_NUM_16
 
 #define BLINK_LED GPIO_NUM_15
-#define ON_LED GPIO_NUM_36
+#define ON_LED GPIO_NUM_25
 
 #define TRIG_PIN GPIO_NUM_18
 #define ECHO_PIN GPIO_NUM_19
