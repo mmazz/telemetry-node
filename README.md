@@ -12,6 +12,7 @@ Actualmente integra los siguientes módulos:
 - DS3231 (RTC)
 - LCD 16x2 (LMB162HBC)
 - PCF8574 (adaptador I2C para LCD)
+- MPU 6050 (Acelerometro y giroscopio)
 
 La Raspberry Pi actúa como estación receptora, mostrando y registrando la telemetría enviada por el nodo.
 
@@ -25,7 +26,7 @@ La Raspberry Pi actúa como estación receptora, mostrando y registrando la tele
 
 ## Estado actual
 
-En desarrollo.
+Funcionando sin wifi.
 
 
 ## Requisitos
@@ -48,7 +49,7 @@ cd esp-idf
 
 ```bash
 git clone https://github.com/mmazz/telemetry-node
-cd env_controller_esp32
+cd telemetry-node
 ```
 
 ## Configurar el entorno
