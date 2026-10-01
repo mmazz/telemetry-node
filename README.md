@@ -49,7 +49,7 @@ cd esp-idf
 
 ```bash
 git clone https://github.com/mmazz/telemetry-node
-cd telemetry-node
+cd telemetry-node/firmware
 ```
 
 ## Configurar el entorno
